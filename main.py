@@ -38,7 +38,7 @@ def add_recipe(name, inputs, outputs, time):
             conn.commit()
         except sqlite3.IntegrityError:
             current_recipe = Recipe.de(cur.execute("SELECT * FROM recipe WHERE recipe_name = ?", (name,)).fetchone())
-            if input("recipe already exists:\n{}\noverwrite? (y/n):".format(current_recipe)) == 'y':
+            if input("recipe with this name already exists:\n{}\noverwrite? (y/n):".format(current_recipe)) == 'y':
                 cur.execute("UPDATE recipe SET inputs=?, outputs=?, time=? WHERE recipe_name=?",
                             (recipe_ser[1], recipe_ser[2], recipe_ser[3], recipe_ser[0]))
                 conn.commit()
@@ -104,7 +104,7 @@ def calc(cli, json, input_path):
     print('All inputs')
     print('========================')
 
-    print('recipes: {}', '\n'.join([str(recipe) for recipe in recipes]))
+    print('recipes: \n{}'.format('\n'.join([str(recipe) for recipe in recipes])))
     print('objectives: {}'.format({k: v for k, v in objectives.items()}))
 
     # 2. create matrix
@@ -112,12 +112,9 @@ def calc(cli, json, input_path):
     obj_vector = np.zeros(len(item_id_dict))
     for recipe_index, recipe in enumerate(recipes):
         # 2.1 normalize the item number
-        inputs = [(item[0] / recipe.recipe.time / recipe.factory_base_speed / (1 + recipe.speed / 100),
-                   item[1])
+        inputs = [(item[0], item[1])
                   for item in recipe.recipe.inputs]
-        outputs = [(item[0] / recipe.recipe.time / recipe.factory_base_speed / (1 + recipe.speed / 100) *
-                    (1 + recipe.productivity / 100),
-                    item[1])
+        outputs = [(item[0] * (1 + recipe.productivity / 100), item[1])
                    for item in recipe.recipe.outputs]
         # 2.2 add to matrix
         for input_item in inputs:
@@ -145,23 +142,22 @@ def calc(cli, json, input_path):
         for i, recipe in enumerate(recipes):
             print('{:3d} -- {}'.format(i, recipe))
             print('    name: {}'.format(recipe.recipe.recipe_name))
-            print('    raw recipe count: {}'.format(solution[i]))
-            print('    factory count: {}'.format(solution[i] / recipe.factory_base_speed / recipe.recipe.time))
+            print('    debug: raw recipe count: {:.3f}'.format(solution[i]))
+            print('    factory count: {:.3f}'.format(
+                solution[i] * recipe.recipe.time / recipe.factory_base_speed / (1 + recipe.speed / 100)
+            ))
             print('    inputs:')
             for input_item in recipe.recipe.inputs:
-                print('        {} -- {:3f}'.format(input_item[1],
-                                                   input_item[0] *
-                                                   solution[i]
-                                                   / recipe.factory_base_speed
-                                                   / recipe.recipe.time))
+                print('        {} -- {:.3f}'.format(
+                    input_item[1],
+                    input_item[0] * solution[i]
+                ))
             print('    outputs:')
             for output_item in recipe.recipe.outputs:
-                print('        {} -- {:3f}'.format(output_item[1],
-                                                   output_item[0] *
-                                                   solution[i] *
-                                                   (1 + recipe.productivity / 100)
-                                                   / recipe.factory_base_speed
-                                                   / recipe.recipe.time))
+                print('        {} -- {:.3f}'.format(
+                    output_item[1],
+                    output_item[0] * solution[i] * (1 + recipe.productivity / 100)
+                ))
 
     elif np.linalg.matrix_rank(to_solve_mat) == np.linalg.matrix_rank(ext_to_solve_mat) < len(to_solve_indices):
         print('Infinite solutions. Add more constraints.')

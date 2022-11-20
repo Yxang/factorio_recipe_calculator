@@ -5,7 +5,7 @@ def cli_load_recipes(cur):
     recipes = list()
     available_recipes = [Recipe.de(recipe) for recipe in cur.execute('SELECT * FROM recipe').fetchall()]
     while True:
-        recipe_name = input('recipe name or index, '
+        recipe_name = input('input recipe name or index, '
                             '\'l\' for list of index and recipes, '
                             '\'s:{name}\' for search, '
                             '\'c\' for current added recipes, '
@@ -24,7 +24,6 @@ def cli_load_recipes(cur):
         elif recipe_name == 'done':
             break
         else:
-            print('adding recipe {}...'.format(recipe_name))
             if recipe_name.isnumeric():
                 recipe_name = int(recipe_name)
                 if recipe_name >= len(available_recipes):
@@ -37,6 +36,7 @@ def cli_load_recipes(cur):
                     print('invalid recipe name')
                     continue
                 recipe = recipe_name[0]
+            print('adding recipe {} {}...'.format(recipe_name, recipe))
             factory_base_speed = float(input('  factory base speed: ').strip())
             if factory_base_speed <= 0:
                 print('  speed must be positive')
