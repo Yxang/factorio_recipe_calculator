@@ -41,8 +41,14 @@ def cli_load_recipes(cur):
             if factory_base_speed <= 0:
                 print('  speed must be positive')
                 continue
-            speed = float(input('  speed from module in percentage: ').strip().strip('%'))
-            productivity = float(input('  productivity from module in percentage: ').strip().strip('%'))
+            speed = float(input('  speed from module (and tech, etc.) in percentage: ').strip().strip('%'))
+            if speed <= -100:
+                print('  speed must be positive')
+                continue
+            productivity = float(input('  productivity from module (and tech, etc.) in percentage: ').strip().strip('%'))
+            if productivity <= -100:
+                print('  speed must be positive')
+                continue
             recipe_instance = RecipeInstance(recipe, speed, productivity, factory_base_speed)
             print('  {}'.format(recipe_instance))
             if input('  confirm? (y/n): ') == 'y':

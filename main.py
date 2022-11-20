@@ -6,7 +6,7 @@ import numpy as np
 
 from calc_util import cli_load_recipes
 from db_util import init_db
-from recipe import Recipe, RecipeInstance
+from recipe import Recipe
 
 FORCE_RECREATE = os.environ.get('FORCE_RECREATE', False)
 
@@ -63,6 +63,9 @@ def list_recipes():
 def calc(cli, json, input_path):
     if cli == json:
         raise Exception("only one of cli or json can be true")
+
+    if json:
+        raise NotImplementedError("json input not implemented")
 
     recipes = list()
     item_id_dict = dict()
@@ -137,8 +140,29 @@ def calc(cli, json, input_path):
     print('========================')
     if np.linalg.matrix_rank(to_solve_mat) == np.linalg.matrix_rank(ext_to_solve_mat) == len(to_solve_indices):
         solution = np.linalg.solve(to_solve_mat, to_solve_obj)
+        if not np.all(solution >= 0):
+            print('WARNING: negative solution, check your input')
         for i, recipe in enumerate(recipes):
-            print('{} -- {}: {}'.format(i, recipe, solution[i]))
+            print('{:3d} -- {}'.format(i, recipe))
+            print('    name: {}'.format(recipe.recipe.recipe_name))
+            print('    raw recipe count: {}'.format(solution[i]))
+            print('    factory count: {}'.format(solution[i] / recipe.factory_base_speed / recipe.recipe.time))
+            print('    inputs:')
+            for input_item in recipe.recipe.inputs:
+                print('        {} -- {:3f}'.format(input_item[1],
+                                                   input_item[0] *
+                                                   solution[i]
+                                                   / recipe.factory_base_speed
+                                                   / recipe.recipe.time))
+            print('    outputs:')
+            for output_item in recipe.recipe.outputs:
+                print('        {} -- {:3f}'.format(output_item[1],
+                                                   output_item[0] *
+                                                   solution[i] *
+                                                   (1 + recipe.productivity / 100)
+                                                   / recipe.factory_base_speed
+                                                   / recipe.recipe.time))
+
     elif np.linalg.matrix_rank(to_solve_mat) == np.linalg.matrix_rank(ext_to_solve_mat) < len(to_solve_indices):
         print('Infinite solutions. Add more constraints.')
     elif np.linalg.matrix_rank(to_solve_mat) < np.linalg.matrix_rank(ext_to_solve_mat):
